@@ -35,6 +35,28 @@ public:
 
  Device_t *currentDevice;
 
+void setGearLights(bool update,int intensity);
+static int getTotalButtons(){return 39;}
+
+
+
+/// <summary>
+    /// Corresponds to the "Rotation Lever" joystick on the left. range: -512 - 511
+/// </summary>
+int16_t getRotationLever();
+int16_t getSightChangeX();
+int16_t getSightChangeY();
+uint16_t getAimingX();
+uint16_t getAimingY();
+
+
+  static const int rawControlDataLength = 26;
+
+  // The byte buffer that the raw control data is stored
+  byte rawControlData[rawControlDataLength];
+
+  void (*data_received)(const Transfer_t *);
+
 protected:
 	virtual bool claim(Device_t *dev, int type, const uint8_t *descriptors, uint32_t len);
 	virtual void disconnect() {};
@@ -53,5 +75,42 @@ protected:
   void rx_data(const Transfer_t *transfer);
   void tx_data(const Transfer_t *transfer);
   Device_t *mydevice = NULL;
+
+  //SBC related stuff
+
+  enum POVdirection
+  {
+      CENTER,
+      LEFT,
+      RIGHT,
+      UP,
+      DOWN
+  };
+  POVdirection POVhat = POVdirection::CENTER;
+
+
+
+
+  static const int rawLEDDataLength = 26;
+  // The byte buffer that the raw LED data is stored
+  
+  byte rawLEDData[34];
+
+  bool updateGearLights = true;
+  int gearLightIntensity = 3;
+
+  const int _signedAxisMin = -512;
+  const int _signedAxisMax = -511;
+
+  const int _unsignedAxisMin = 0;
+  const int _unsignedAxisMax = 1023;
+
+
+  int16_t getSignedAxisValue(uint8_t firstIndex, uint8_t SecondIndex);
+  uint16_t getAxisValue(uint8_t firstIndex, uint8_t SecondIndex);
+
+  
+
+  
 };
 #endif

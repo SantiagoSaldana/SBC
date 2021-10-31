@@ -117,7 +117,7 @@ bool SBCController::claim(Device_t *dev, int type, const uint8_t *descriptors, u
   queue_Data_Transfer(rxpipe_, rxbuf_, rx_size_, this);
 
   txpipe_->callback_function = tx_callback;
-  Serial.print("got here");
+  //Serial.print("got here");
  return true;
 }
 
@@ -130,7 +130,12 @@ void SBCController::rx_callback(const Transfer_t *transfer)
 
 void SBCController::rx_data(const Transfer_t *transfer)
 {
-  print_hexbytes((uint8_t*)transfer->buffer, transfer->length);  
+  //print_hexbytes((uint8_t*)transfer->buffer, transfer->length);
+
+  memmove(rawControlData, (uint8_t*)transfer->buffer, rawControlDataLength);
+
+  data_received(transfer);
+  
   queue_Data_Transfer(rxpipe_, rxbuf_, rx_size_, this);
 }
 
@@ -145,4 +150,117 @@ void SBCController::tx_callback(const Transfer_t *transfer)
 void SBCController::tx_data(const Transfer_t *transfer)
 {
 }
+
+
+// extra SBC logic stuff
+
+void SBCController::setGearLights(bool update,int intensity)
+{
+  updateGearLights = update;
+  gearLightIntensity = intensity;
+}
+
+
+/// <summary>
+    /// Corresponds to the "Rotation Lever" joystick on the left. range: -512 - 511
+/// </summary>
+int16_t SBCController::getRotationLever() {
+        //return getSignedAxisValue(13, 14);
+    }
+
+/// <summary>
+    /// Corresponds to the "Sight Change" analog stick on the "Rotation Lever" joystick.  X Axis value. range: -512 - 511
+/// </summary>
+int16_t SBCController::getSightChangeX() {
+        return getSignedAxisValue(15, 16);
+    }
+
+/// <summary>
+/// Corresponds to the "Sight Change" analog stick on the "Rotation Lever" joystick.  Y Axis value. range: -512 - 511
+/// </summary>
+int16_t SBCController::getSightChangeY() {
+        getSignedAxisValue(17, 18);
+    }
+
+/// <summary>
+    /// Corresponds to the "Aiming Lever" joystick on the right.  X Axis value. range: 0 - 1023
+/// </summary>
+uint16_t SBCController::getAimingX() {
+  return getAxisValue(9,10);
+}
+
+/// <summary>
+/// Corresponds to the "Aiming Lever" joystick on the right.  Y Axis value. range: 0 - 1023
+/// </summary>
+uint16_t SBCController::getAimingY() {
+        return getAxisValue(11, 12);
+}
+
+/// <summary>
+/// Used to bitshift array and actually return proper 10-bit value for axis, 0 - 1023
+/// </summary>
+uint16_t SBCController::getAxisValue(uint8_t firstIndex, uint8_t SecondIndex)
+{
+    uint16_t temp = (uint16_t) rawControlData[firstIndex];
+    uint16_t temp2 = (uint16_t) rawControlData[SecondIndex];
+    temp = temp << 2;
+    temp2 = temp2 >> 6;
+    temp = temp | temp2;
+
+    
+    return temp;
+}
+
+/// <summary>
+/// Used to bitshift array and actually return proper 10-bit value for axis, -512 - 511.
+/// </summary>
+int16_t SBCController::getSignedAxisValue(uint8_t firstIndex, uint8_t SecondIndex)
+{
+    uint16_t temp = rawControlData[firstIndex];
+    uint16_t temp2 = rawControlData[SecondIndex];
+    int16_t result;
+    temp = temp << 2;
+    temp2 = temp2 >> 6;
+    temp = temp | temp2;
+    if (rawControlData[firstIndex] >= 128)//we need to pad on some 1's so that we can use 16-bit 2's complement
+        temp |= 0xFC00;//0b1111110000000000
+    return (int16_t)temp;
+}
+/*
+/// <summary>
+/// Corresponds to the left pedal on the pedal block, range 0 - 1023
+/// </summary>
+public int LeftPedal {
+        get { return getAxisValue(19, 20); }
+    }
+
+/// <summary>
+/// Corresponds to the middle pedal on the pedal block, range 0 - 1023
+/// </summary>
+public int MiddlePedal {
+        get { return getAxisValue(21, 22); }
+    }
+
+/// <summary>
+/// Corresponds to the right pedal on the pedal block, range 0 - 1023
+/// </summary>
+public int RightPedal {
+        get { return getAxisValue(23, 24); }
+    }
+
+/// <summary>
+/// Corresponds to the tuner dial position.  The 9 o'clock postion is 0, and the 6 o'clock position is 12.
+/// The blank area between the 6 and 9 o'clock positions is 13, 14, and 15 clockwise.
+/// </summary>
+public int TunerDial {
+  get { return (int) rawControlData[24] & 0x0F; }
+}
+
+/// <summary>
+    /// Corresponds to the gear lever on the left block.  range: -2,-1,1,2,3,4,5
+/// </summary>
+public int GearLever {
+        get { return (int)unchecked((sbyte)rawControlData[25]); }
+}
+*/
 

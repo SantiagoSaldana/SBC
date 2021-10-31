@@ -30,13 +30,20 @@
 USBHost myusb;
 USBHub hub1(myusb);
 USBHub hub2(myusb);
-SBCController SBC(myusb); // will never claim anything... 
+SBCController SBC(myusb); 
 USBHIDParser hid1(myusb);
 
 USBDriver *drivers[] = {&hub1, &hub2, &hid1};
 #define CNT_DEVICES (sizeof(drivers)/sizeof(drivers[0]))
 const char * driver_names[CNT_DEVICES] = {"Hub1", "Hub2", "HID1"};
 bool driver_active[CNT_DEVICES] = {false, false, false};
+
+
+//this gets called once data is transferred and appropriately copied.
+void rx_callback(const Transfer_t *transfer)
+{
+  Serial.println(SBC.getAimingX());
+}
 
 void setup()
 {
@@ -49,41 +56,12 @@ void setup()
   Serial.println("C - Toggles showing changed data only on or off");
   Serial.println("<anything else> - toggles showing the Hid formatted breakdown of the data\n");
 
+  SBC.data_received = rx_callback;
   myusb.begin();
 }
-
-
-  // Create a new pipe.  It's QH is added to the async or periodic schedule,
-// and a halt qTD is added to the QH, so we can grow the qTD list later.
-//   dev:       device owning this pipe/endpoint
-//   type:      0=control, 2=bulk, 3=interrupt
-//   endpoint:  0 for control, 1-15 for bulk or interrupt
-//   direction: 0=OUT, 1=IN  (unused for control)
-//   maxlen:    maximum packet size
-//   interval:  polling interval for interrupt, power of 2, unused if control or bulk
-//
-
-
-/*
- *             USBDeviceInfo[] details = USBDevice.GetDevices("{5C2B3F1A-E9B8-4BD6-9D19-8A283B85726E}");
-            USBDeviceInfo match = details.First(info => info.VID == 0x0A7B && info.PID == 0xD000);
-            MyUsbDevice = new USBDevice(match);
-            reader = MyUsbDevice.Interfaces.First().InPipe;
-            writer = MyUsbDevice.Interfaces.First().OutPipe;
-
-            byte[] buf = new byte[64];
-            
-            reader.Read(buf);//can't remember why I do this.
-
-                /// <summary>
-    /// The byte buffer that the raw LED data is stored
-    /// </summary>
-    byte[] rawLEDData = new Byte[34];
- */
-
 
 void loop()
 {
   myusb.Task();
-
+  delay(50);
 }
