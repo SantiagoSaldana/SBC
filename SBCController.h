@@ -37,6 +37,52 @@ public:
 
 void setGearLights(bool update,int intensity);
 static int getTotalButtons(){return 39;}
+  
+//DO NOT CHANGE ORDER
+//THESE match the order they are presented in the USB packet
+enum ButtonEnum {
+  RightJoyMainWeapon,
+  RightJoyFire,
+  RightJoyLockOn,
+      Eject,
+  CockpitHatch,
+  Ignition,
+  Start,
+  MultiMonOpenClose,
+  MultiMonMapZoomInOut,
+  MultiMonModeSelect,
+  MultiMonSubMonitor,
+  MainMonZoomIn,
+  MainMonZoomOut,
+      FunctionFSS,
+      FunctionManipulator,
+      FunctionLineColorChange,
+  Washing,
+  Extinguisher,
+  Chaff,
+      FunctionTankDetach,
+      FunctionOverride,
+      FunctionNightScope,
+      FunctionF1,
+      FunctionF2,
+      FunctionF3,
+  WeaponConMain,
+  WeaponConSub,
+  WeaponConMagazine,
+  Comm1,
+  Comm2,
+  Comm3,
+  Comm4,
+  Comm5,
+  LeftJoySightChange,
+  ToggleFilterControl,
+  ToggleOxygenSupply,
+  ToggleFuelFlowRate,
+  ToggleBufferMaterial,
+  ToggleVTLocation,
+  TunerDialStateChange,
+  GearLeverStateChange
+};
 
 
 
@@ -48,7 +94,12 @@ int16_t getSightChangeX();
 int16_t getSightChangeY();
 uint16_t getAimingX();
 uint16_t getAimingY();
-
+uint16_t getLeftPedal();
+uint16_t getMiddlePedal();
+uint16_t getRightPedal();
+uint8_t getTunerDial();
+int8_t getGearLever();
+bool getButtonState(uint8_t buttonVal);
 
   static const int rawControlDataLength = 26;
 
@@ -114,3 +165,4 @@ protected:
   
 };
 #endif
+

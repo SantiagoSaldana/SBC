@@ -42,7 +42,35 @@ bool driver_active[CNT_DEVICES] = {false, false, false};
 //this gets called once data is transferred and appropriately copied.
 void rx_callback(const Transfer_t *transfer)
 {
-  Serial.println(SBC.getAimingX());
+
+  Serial.print(SBC.getRotationLever());
+  Serial.print(" ");
+  Serial.print(SBC.getSightChangeX());
+  Serial.print(" ");
+  Serial.print(SBC.getSightChangeY());
+  Serial.print(" ");
+  Serial.print(SBC.getAimingX());  
+  Serial.print(" ");
+  Serial.print(SBC.getAimingY());  
+  Serial.print(" ");
+  Serial.print(SBC.getLeftPedal());    
+  Serial.print(" ");
+  Serial.print(SBC.getMiddlePedal());  
+  Serial.print(" ");  
+  Serial.print(SBC.getRightPedal());  
+  Serial.print(" ");
+  Serial.print(SBC.getTunerDial());      
+  Serial.print(" ");
+  Serial.print(SBC.getGearLever());      
+  for(int i=0;i<39;i++)
+  {
+    Serial.print(SBC.getButtonState(i));
+    Serial.print(" ");
+  }
+  Serial.println();
+  delay(50);
+       
+    
 }
 
 void setup()
@@ -65,3 +93,4 @@ void loop()
   myusb.Task();
   delay(50);
 }
+
