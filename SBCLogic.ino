@@ -42,7 +42,7 @@ bool driver_active[CNT_DEVICES] = {false, false, false};
 //this gets called once data is transferred and appropriately copied.
 void rx_callback(const Transfer_t *transfer)
 {
-
+/*
   Serial.print(SBC.getRotationLever());
   Serial.print(" ");
   Serial.print(SBC.getSightChangeX());
@@ -68,6 +68,22 @@ void rx_callback(const Transfer_t *transfer)
     Serial.print(" ");
   }
   Serial.println();
+*/
+  Joystick.X(SBC.getAimingX());
+  Joystick.Y(SBC.getAimingY());
+  Joystick.Z(SBC.getRotationLever());
+  Joystick.Zrotate(SBC.getLeftPedal());
+  Joystick.sliderLeft(SBC.getSightChangeX());
+  Joystick.sliderRight(SBC.getSightChangeY());
+  for(int i=0;i<32;i++)
+  {
+    if(SBC.getButtonState(i))    
+      Joystick.button(i + 1, 1);
+    else
+      Joystick.button(i + 1, 0);
+  }
+    
+  Joystick.send_now();
   delay(50);
        
     
@@ -77,13 +93,8 @@ void setup()
 {
   Serial1.begin(2000000);
   while (!Serial) ; // wait for Arduino Serial Monitor
-  Serial.println("\n\nUSB HID Device Info Program");
-  Serial.println("\nThis Sketch shows information about plugged in HID devices");
-  Serial.println("\n*** You can control the output by simple character input to Serial ***");
-  Serial.println("R - Turns on or off showing the raw data");
-  Serial.println("C - Toggles showing changed data only on or off");
-  Serial.println("<anything else> - toggles showing the Hid formatted breakdown of the data\n");
-
+  Joystick.useManualSend(true);
+  
   SBC.data_received = rx_callback;
   myusb.begin();
 }
