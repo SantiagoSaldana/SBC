@@ -38,6 +38,7 @@ USBDriver *drivers[] = {&hub1, &hub2, &hid1};
 const char * driver_names[CNT_DEVICES] = {"Hub1", "Hub2", "HID1"};
 bool driver_active[CNT_DEVICES] = {false, false, false};
 
+bool lightSent = false;
 
 //this gets called once data is transferred and appropriately copied.
 void rx_callback(const Transfer_t *transfer)
@@ -77,8 +78,17 @@ void rx_callback(const Transfer_t *transfer)
   Joystick.sliderRight(SBC.getSightChangeY());
   for(int i=0;i<32;i++)
   {
-    if(SBC.getButtonState(i))    
+    if(SBC.getButtonState(i)) 
+    {   
       Joystick.button(i + 1, 1);
+      
+      if(!lightSent)
+      {
+        Serial.println("sending light");
+      SBC.SetLEDState(SBC.ControllerLEDEnum::Eject, 15, true);
+      lightSent = true;
+      }
+    }
     else
       Joystick.button(i + 1, 0);
   }
@@ -101,6 +111,7 @@ void setup()
 
 void loop()
 {
+  
   myusb.Task();
   delay(50);
 }

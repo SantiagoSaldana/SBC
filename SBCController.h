@@ -40,11 +40,11 @@ static int getTotalButtons(){return 39;}
   
 //DO NOT CHANGE ORDER
 //THESE match the order they are presented in the USB packet
-enum ButtonEnum {
+enum class ButtonEnum {
   RightJoyMainWeapon,
   RightJoyFire,
   RightJoyLockOn,
-      Eject,
+  Eject,
   CockpitHatch,
   Ignition,
   Start,
@@ -54,18 +54,18 @@ enum ButtonEnum {
   MultiMonSubMonitor,
   MainMonZoomIn,
   MainMonZoomOut,
-      FunctionFSS,
-      FunctionManipulator,
-      FunctionLineColorChange,
+  FunctionFSS,
+  FunctionManipulator,
+  FunctionLineColorChange,
   Washing,
   Extinguisher,
   Chaff,
-      FunctionTankDetach,
-      FunctionOverride,
-      FunctionNightScope,
-      FunctionF1,
-      FunctionF2,
-      FunctionF3,
+  FunctionTankDetach,
+  FunctionOverride,
+  FunctionNightScope,
+  FunctionF1,
+  FunctionF2,
+  FunctionF3,
   WeaponConMain,
   WeaponConSub,
   WeaponConMagazine,
@@ -84,6 +84,47 @@ enum ButtonEnum {
   GearLeverStateChange
 };
 
+enum class ControllerLEDEnum {
+    Eject = 4,
+    CockpitHatch = 5,
+    Ignition = 6,
+    Start = 7,
+    OpenClose = 8,
+    MapZoomInOut = 9,
+    ModeSelect = 10,
+    SubMonitorModeSelect = 11,
+    MainMonitorZoomIn = 12,
+    MainMonitorZoomOut = 13,
+    ForecastShootingSystem = 14,
+    Manipulator = 15,
+    LineColorChange = 16,
+    Washing = 17,
+    Extinguisher = 18,
+    Chaff = 19,
+    TankDetach = 20,
+    Override = 21,
+    NightScope = 22,
+    F1 = 23,
+    F2 = 24,
+    F3 = 25,
+    MainWeaponControl = 26,
+    SubWeaponControl = 27,
+    MagazineChange = 28,
+    Comm1 = 29,
+    Comm2 = 30,
+    Comm3 = 31,
+    Comm4 = 32,
+    Comm5 = 33,
+//not sure what is missing here
+    GearR = 35,
+    GearN = 36,
+    Gear1 = 37,
+    Gear2 = 38,
+    Gear3 = 39,
+    Gear4 = 40,
+    Gear5 = 41
+};
+
 
 
 /// <summary>
@@ -100,13 +141,24 @@ uint16_t getRightPedal();
 uint8_t getTunerDial();
 int8_t getGearLever();
 bool getButtonState(uint8_t buttonVal);
+void SetLEDState(ControllerLEDEnum LightId, int Intensity, bool refreshState);
+void RefreshLEDState() 
+{
+  if(sendLightData == false)
+  {
+    sendLightDataPacket();
+  }
+  else
+    sendLightData = true;
+}
 
-  static const int rawControlDataLength = 26;
+void SBCController::sendLightDataPacket();
 
-  // The byte buffer that the raw control data is stored
-  byte rawControlData[rawControlDataLength];
 
-  void (*data_received)(const Transfer_t *);
+static const int rawControlDataLength = 26;
+
+
+void (*data_received)(const Transfer_t *);
 
 protected:
 	virtual bool claim(Device_t *dev, int type, const uint8_t *descriptors, uint32_t len);
@@ -147,8 +199,10 @@ protected:
   
   byte rawLEDData[34];
 
+  bool sendLightData = false;
+
   bool updateGearLights = true;
-  int gearLightIntensity = 3;
+  int gearLightIntensity = 15;
 
   const int _signedAxisMin = -512;
   const int _signedAxisMax = -511;
@@ -160,9 +214,22 @@ protected:
   int16_t getSignedAxisValue(uint8_t firstIndex, uint8_t SecondIndex);
   uint16_t getAxisValue(uint8_t firstIndex, uint8_t SecondIndex);
 
-  
+ 
+  // The byte buffer that the raw control data is stored
+  byte rawControlData[rawControlDataLength];
 
+  /// <summary>
+  /// Checks to see if the buton state has changed
+  /// </summary>
+  /// <param name="buf">The raw data buffer</param>
+  /// <param name="bytePos">The byte position to check</param>
+  /// <param name="maskValue">The mask value for that button/switch</param>
+  /// <returns></returns>
+  bool isStateChanged(uint8_t* buf, uint8_t bytePos, uint8_t maskValue) {
+  return ((buf[bytePos] & maskValue) != (rawControlData[bytePos] & maskValue));
+  }
   
+  void GearLightsRefresh(uint8_t gearValue);
 };
 #endif
 

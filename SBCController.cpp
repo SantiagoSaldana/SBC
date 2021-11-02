@@ -20,8 +20,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// This simple class does nothing, but print out information about the device it
-// extracts from calls to claim... 
 
 #include <Arduino.h>
 #include <USBHost_t36.h>
@@ -58,10 +56,10 @@ bool SBCController::claim(Device_t *dev, int type, const uint8_t *descriptors, u
 
   //if (len < 9+7+7) return false;//don't understand this
 
-  // Some common stuff for both XBoxs
+
   uint32_t count_end_points = descriptors[4];
   if (count_end_points < 2) return false;
-  //if (descriptors[5] != 0xff) return false; // bInterfaceClass, 3 = HID
+
   rx_ep_ = 0;
   uint32_t txep = 0;
   uint8_t rx_interval = 0;
@@ -76,7 +74,7 @@ bool SBCController::claim(Device_t *dev, int type, const uint8_t *descriptors, u
 
  
   while ((rx_ep_ == 0) || txep == 0) {
-    print("  Index:", descriptor_index, DEC);
+    //print("  Index:", descriptor_index, DEC);
 
     if (descriptor_index >= len) return false;      // we ran off the end and did not get end points
     // see if the next data is an end point descript
@@ -100,11 +98,11 @@ bool SBCController::claim(Device_t *dev, int type, const uint8_t *descriptors, u
   }
 
   if ((rx_ep_ == 0) || (txep == 0)) return false; // did not find two end points.
-  print("JoystickController, rx_ep_=", rx_ep_ & 15);
+  /*print("JoystickController, rx_ep_=", rx_ep_ & 15);
   print("(", rx_size_);
   print("), txep=", txep);
   print("(", tx_size_);
-  Serial.println(")\n");//print with no extra doesn't work.
+  Serial.println(")\n");//print with no extra doesn't work.*/
 
   rxpipe_ = new_Pipe(dev, 3, rx_ep_ & 15, 1, rx_size_, rx_interval);
   if (!rxpipe_) return false;
@@ -117,6 +115,9 @@ bool SBCController::claim(Device_t *dev, int type, const uint8_t *descriptors, u
   queue_Data_Transfer(rxpipe_, rxbuf_, rx_size_, this);
 
   txpipe_->callback_function = tx_callback;
+
+
+  //sendLightDataPacket();//set all to 0 and start off chain of sending only when we receive confirmation that data has been sent.
   //Serial.print("got here");
  return true;
 }
@@ -132,23 +133,78 @@ void SBCController::rx_data(const Transfer_t *transfer)
 {
   //print_hexbytes((uint8_t*)transfer->buffer, transfer->length);
 
+  uint8_t previousGearState = getGearLever();
+  //GearLightsRefresh(previousGearState);
+
   memmove(rawControlData, (uint8_t*)transfer->buffer, rawControlDataLength);
+
+/*
+  uint16_t currentGearState = getGearLever();
+
+
+  if (updateGearLights && currentGearState != previousGearState);
+  {
+    GearLightsRefresh(currentGearState);
+  }
+
+  Serial.print("gear state");
+  Serial.print(previousGearState);
+  Serial.print(" : ");
+  Serial.println(currentGearState);
+*/
 
   data_received(transfer);
   
   queue_Data_Transfer(rxpipe_, rxbuf_, rx_size_, this);
 }
 
+//this only sets the gearLights, you still have to refreshlights
+void SBCController::GearLightsRefresh(uint8_t gearValue)
+{
+ /*  LED VALUES
+  Gear5 = 41,
+  Gear4 = 40,
+  Gear3 = 39,
+  Gear2 = 38,
+  Gear1 = 37,
+  GearN = 36,
+  GearR = 35,*/
+  
+  for(int i=35;i<=41;i++)
+    SetLEDState((ControllerLEDEnum)(i),0,false);//turn all off
+
+  //int gearValue = GearLever;//returns values -2,-1,1,2,3,4,5
+  if (gearValue < 0)
+    SetLEDState( (ControllerLEDEnum) (((uint8_t) ControllerLEDEnum::Gear1) + gearValue),gearLightIntensity,true);
+  else
+    SetLEDState( (ControllerLEDEnum) (((uint8_t) ControllerLEDEnum::GearN) + gearValue), gearLightIntensity, true);
+}
+
 void SBCController::tx_callback(const Transfer_t *transfer)
 {
-  /*
-  if (!transfer->driver) return;
-  ((SBCController *)(transfer->driver))->tx_data(transfer);
-  */
+  //Serial.println("data sent");
+  /*if (!transfer->driver) return;
+  ((SBCController *)(transfer->driver))->tx_data(transfer);*/
+  
+}
+
+void SBCController::sendLightDataPacket()
+{
+        Serial.println("trying to send light");
+  memmove(txbuf_, rawLEDData, rawLEDDataLength);
+  queue_Data_Transfer(txpipe_, txbuf_, tx_size_, this);
+
 }
 
 void SBCController::tx_data(const Transfer_t *transfer)
 {
+    /*Serial.println("sent Light");
+
+  if(sendLightData)
+  {
+    sendLightDataPacket();
+    sendLightData = false;
+  }*/
 }
 
 
@@ -231,8 +287,6 @@ uint16_t SBCController::getAxisValue(uint8_t firstIndex, uint8_t SecondIndex)
     temp = temp << 2;
     temp2 = temp2 >> 6;
     temp = temp | temp2;
-
-    
     return temp;
 }
 
@@ -266,4 +320,28 @@ bool SBCController::getButtonState(uint8_t buttonVal)
     return ((rawControlData[offsetVal] & maskVal) > 0);
   }
   return false;
+}
+
+/// <summary>
+/// Sets the intensity of the specified LED in the buffer, but gives the option on whether you want
+/// to send the buffer to the controller.  This can be useful for updating multiple LED's at the
+/// same time, but not waiting for the LED buffer to transfer to the device after each call.
+/// </summary>
+/// <param name="LightId">A ControllerLEDEnum value that specifies which LED to modify</param>
+/// <param name="Intensity">The intensity of the LED, ranging from 0 to 15</param>
+/// <param name="refreshState">A boolean value indicating whether to refresh the buffer on the device.</param>
+void SBCController::SetLEDState(ControllerLEDEnum LightId, int Intensity, bool refreshState) {
+  int hexPos = ((int) LightId) % 2;
+  int bytePos = (((int) LightId) - hexPos) / 2;
+  
+  if (Intensity > 0x0f) Intensity = 0x0f;
+  
+  // Erase the byte position, and set the light intensity
+  rawLEDData[bytePos] &= (byte) ((hexPos == 1)?0x0F:0xF0);
+  rawLEDData[bytePos] += (byte) (Intensity * ((hexPos == 1)?0x10:0x01));
+  
+  if (refreshState) {
+   // RefreshLEDState();
+   sendLightDataPacket();
+  }
 }
