@@ -40,6 +40,10 @@ bool driver_active[CNT_DEVICES] = {false, false, false};
 
 bool lightSent = false;
 
+uint8_t lightValStart = 35;
+uint8_t lightValEnd = 41;
+uint8_t currentLightVal = lightValStart;
+
 //this gets called once data is transferred and appropriately copied.
 void rx_callback(const Transfer_t *transfer)
 {
@@ -85,7 +89,7 @@ void rx_callback(const Transfer_t *transfer)
       if(!lightSent)
       {
         Serial.println("sending light");
-      SBC.SetLEDState(SBC.ControllerLEDEnum::Eject, 15, true);
+      SBC.SetLEDState(SBCController::ControllerLEDEnum::Eject, 0, false);  
       lightSent = true;
       }
     }
@@ -94,7 +98,17 @@ void rx_callback(const Transfer_t *transfer)
   }
     
   Joystick.send_now();
-  delay(50);
+
+  for(int i =lightValStart;i<lightValEnd;i++)
+    SBC.SetLEDState((SBCController::ControllerLEDEnum)i, 0, false);  
+     
+  SBC.SetLEDState((SBCController::ControllerLEDEnum)currentLightVal, 15, true);
+  currentLightVal++;
+
+  if(currentLightVal >= lightValEnd)
+    currentLightVal = lightValStart;
+  
+  delay(100);
        
     
 }

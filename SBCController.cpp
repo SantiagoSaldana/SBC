@@ -133,7 +133,7 @@ void SBCController::rx_data(const Transfer_t *transfer)
 {
   //print_hexbytes((uint8_t*)transfer->buffer, transfer->length);
 
-  uint8_t previousGearState = getGearLever();
+  //uint8_t previousGearState = getGearLever();
   //GearLightsRefresh(previousGearState);
 
   memmove(rawControlData, (uint8_t*)transfer->buffer, rawControlDataLength);
@@ -183,8 +183,8 @@ void SBCController::GearLightsRefresh(uint8_t gearValue)
 void SBCController::tx_callback(const Transfer_t *transfer)
 {
   //Serial.println("data sent");
-  /*if (!transfer->driver) return;
-  ((SBCController *)(transfer->driver))->tx_data(transfer);*/
+  if (!transfer->driver) return;
+  ((SBCController *)(transfer->driver))->tx_data(transfer);
   
 }
 
