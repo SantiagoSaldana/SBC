@@ -1,4 +1,4 @@
-/* USB Device Info class
+/* SBC Controller class
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -29,11 +29,15 @@
 #include <USBHost_t36.h>
 
 
+ //IntervalTimer pollTimer;
+ 
 class SBCController : public USBDriver {
 public:
 	SBCController(USBHost &host) { init();}
 
  Device_t *currentDevice;
+ 
+ 
 
 void setGearLights(bool update,int intensity);
 static int getTotalButtons(){return 39;}
@@ -125,7 +129,12 @@ enum class ControllerLEDEnum {
     Gear5 = 41
 };
 
+const uint8_t lowestLightVal = (uint8_t) ControllerLEDEnum::Eject;
+const uint8_t highestLightVal = (uint8_t) ControllerLEDEnum::Gear5;
+const uint8_t maxLightIntensity = 15;
+const uint8_t minLightIntensity = 0;
 
+uint16_t timeBetweenPolls = 50;//time in microseconds to delay
 
 /// <summary>
     /// Corresponds to the "Rotation Lever" joystick on the left. range: -512 - 511
@@ -141,24 +150,33 @@ uint16_t getRightPedal();
 uint8_t getTunerDial();
 int8_t getGearLever();
 bool getButtonState(uint8_t buttonVal);
-void SetLEDState(ControllerLEDEnum LightId, int Intensity, bool refreshState);
+void SetAllLEDs(uint8_t Intensity,bool refreshState);
+void SetLEDState(ControllerLEDEnum LightId, uint8_t Intensity, bool refreshState);
+void SetPollTime(uint16_t milliseconds);
+static void StartPolling();
+void StopPolling();
+
+void sendLightDataPacket();
+
+bool firstSent = false;
+
 void RefreshLEDState() 
 {
-  if(sendLightData == false)
-  {
     sendLightDataPacket();
-  }
-  else
-    sendLightData = true;
 }
 
-void SBCController::sendLightDataPacket();
+
 
 
 static const int rawControlDataLength = 26;
 
 
 void (*data_received)(const Transfer_t *);
+
+static const int rawLEDDataLength = 22;
+byte rawLEDData[rawLEDDataLength];
+
+  void pollDevice();//called by timer to poll device for status.
 
 protected:
 	virtual bool claim(Device_t *dev, int type, const uint8_t *descriptors, uint32_t len);
@@ -172,6 +190,7 @@ protected:
   Pipe_t      *txpipe_;
   uint8_t     rxbuf_[64]; // receive circular buffer
   uint8_t     txbuf_[64];   // buffer to use to send commands to joystick 
+  
 
   static void rx_callback(const Transfer_t *transfer);
   static void tx_callback(const Transfer_t *transfer);
@@ -194,12 +213,7 @@ protected:
 
 
 
-  static const int rawLEDDataLength = 26;
   // The byte buffer that the raw LED data is stored
-  
-  byte rawLEDData[34];
-
-  bool sendLightData = false;
 
   bool updateGearLights = true;
   int gearLightIntensity = 15;
@@ -209,6 +223,8 @@ protected:
 
   const int _unsignedAxisMin = 0;
   const int _unsignedAxisMax = 1023;
+
+  uint16_t pollTimeMicroSeconds = 10000;
 
 
   int16_t getSignedAxisValue(uint8_t firstIndex, uint8_t SecondIndex);

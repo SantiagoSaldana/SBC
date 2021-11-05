@@ -1,4 +1,4 @@
-/* USB Device Info class
+/* SBC Controller class
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -40,6 +40,13 @@ static void print(const char *title, uint32_t val, uint8_t b = DEC) {
 void SBCController::init()
 {
 	driver_ready_for_device(this);
+  
+}
+
+void SBCController::SetPollTime(uint16_t milliseconds)
+{
+  pollTimeMicroSeconds = milliseconds * 1000;
+//  pollTimer.update(pollTimeMicroSeconds);  
 }
 
 // Again this class is solely to display as much information about a device as we can...
@@ -98,55 +105,70 @@ bool SBCController::claim(Device_t *dev, int type, const uint8_t *descriptors, u
   }
 
   if ((rx_ep_ == 0) || (txep == 0)) return false; // did not find two end points.
-  /*print("JoystickController, rx_ep_=", rx_ep_ & 15);
+  print("JoystickController, rx_ep_=", rx_ep_ & 15);
   print("(", rx_size_);
   print("), txep=", txep);
   print("(", tx_size_);
-  Serial.println(")\n");//print with no extra doesn't work.*/
+  print(" tx interval",tx_interval);
+  Serial.println(")\n");//print with no extra doesn't work.
 
   rxpipe_ = new_Pipe(dev, 3, rx_ep_ & 15, 1, rx_size_, rx_interval);
   if (!rxpipe_) return false;
   txpipe_ = new_Pipe(dev, 3, txep, 0, tx_size_, tx_interval);
-  if (!txpipe_) {
-    //free_Pipe(rxpipe_);
-    return false;
-  }
-  rxpipe_->callback_function = rx_callback;
-  queue_Data_Transfer(rxpipe_, rxbuf_, rx_size_, this);
+  if (!txpipe_) return false;
 
+  
+  rxpipe_->callback_function = rx_callback;
   txpipe_->callback_function = tx_callback;
 
-
-  //sendLightDataPacket();//set all to 0 and start off chain of sending only when we receive confirmation that data has been sent.
-  //Serial.print("got here");
+  queue_Data_Transfer(rxpipe_, rxbuf_, rx_size_, this);
  return true;
+}
+
+static void SBCController::StartPolling()
+{
+//    pollTimer.begin(SBCController::pollDevice,pollTimeMicroSeconds);//call device repeatedly to get current state
+}
+
+void SBCController::StopPolling()
+{
+   // pollTimer.end();
+}
+
+void SBCController::pollDevice()
+{
+  queue_Data_Transfer(rxpipe_, rxbuf_, rx_size_, this);
 }
 
 void SBCController::rx_callback(const Transfer_t *transfer)
 {
-  //Serial.println("got here");
     if (!transfer->driver) return;
   ((SBCController *)(transfer->driver))->rx_data(transfer);    
 }
 
 void SBCController::rx_data(const Transfer_t *transfer)
 {
-  //print_hexbytes((uint8_t*)transfer->buffer, transfer->length);
 
-  //uint8_t previousGearState = getGearLever();
+    for(int i=0;i<32;i++)
+    Serial.print(getButtonState(i));
+    Serial.println();
+    
+  print_hexbytes((uint8_t*)transfer->buffer, transfer->length);
+
+  uint8_t previousGearState = getGearLever();
   //GearLightsRefresh(previousGearState);
 
   memmove(rawControlData, (uint8_t*)transfer->buffer, rawControlDataLength);
 
+
+  int8_t currentGearState = getGearLever();
+
 /*
-  uint16_t currentGearState = getGearLever();
-
-
   if (updateGearLights && currentGearState != previousGearState);
   {
     GearLightsRefresh(currentGearState);
   }
-
+/*
   Serial.print("gear state");
   Serial.print(previousGearState);
   Serial.print(" : ");
@@ -154,7 +176,9 @@ void SBCController::rx_data(const Transfer_t *transfer)
 */
 
   data_received(transfer);
-  
+
+  //not sure about whether I should call this from here or do a poll timer.
+  //this is curently working so I will leave it like this for now.
   queue_Data_Transfer(rxpipe_, rxbuf_, rx_size_, this);
 }
 
@@ -171,7 +195,7 @@ void SBCController::GearLightsRefresh(uint8_t gearValue)
   GearR = 35,*/
   
   for(int i=35;i<=41;i++)
-    SetLEDState((ControllerLEDEnum)(i),0,false);//turn all off
+    SetLEDState((ControllerLEDEnum)(i),0,false);//turn all off, don't send packet
 
   //int gearValue = GearLever;//returns values -2,-1,1,2,3,4,5
   if (gearValue < 0)
@@ -190,21 +214,18 @@ void SBCController::tx_callback(const Transfer_t *transfer)
 
 void SBCController::sendLightDataPacket()
 {
-        Serial.println("trying to send light");
+  firstSent = true;
+  //Serial.println("trying to send light");
   memmove(txbuf_, rawLEDData, rawLEDDataLength);
   queue_Data_Transfer(txpipe_, txbuf_, tx_size_, this);
 
 }
 
+//As far as I can tell this is essentially acknowledgement 
+//from the device that it got the command
 void SBCController::tx_data(const Transfer_t *transfer)
 {
-    /*Serial.println("sent Light");
-
-  if(sendLightData)
-  {
-    sendLightDataPacket();
-    sendLightData = false;
-  }*/
+    //Serial.println("Light Sent");
 }
 
 
@@ -297,7 +318,6 @@ int16_t SBCController::getSignedAxisValue(uint8_t firstIndex, uint8_t SecondInde
 {
     uint16_t temp = rawControlData[firstIndex];
     uint16_t temp2 = rawControlData[SecondIndex];
-    int16_t result;
     temp = temp << 2;
     temp2 = temp2 >> 6;
     temp = temp | temp2;
@@ -330,18 +350,28 @@ bool SBCController::getButtonState(uint8_t buttonVal)
 /// <param name="LightId">A ControllerLEDEnum value that specifies which LED to modify</param>
 /// <param name="Intensity">The intensity of the LED, ranging from 0 to 15</param>
 /// <param name="refreshState">A boolean value indicating whether to refresh the buffer on the device.</param>
-void SBCController::SetLEDState(ControllerLEDEnum LightId, int Intensity, bool refreshState) {
-  int hexPos = ((int) LightId) % 2;
-  int bytePos = (((int) LightId) - hexPos) / 2;
+void SBCController::SetLEDState(ControllerLEDEnum LightId, uint8_t Intensity, bool refreshState) {
+
+  uint8_t cappedIntensity = constrain(Intensity,minLightIntensity,maxLightIntensity);
+  uint8_t hexPos = ((uint8_t) LightId) % 2;
+  uint8_t bytePos = (((uint8_t) LightId) - hexPos) / 2;
   
-  if (Intensity > 0x0f) Intensity = 0x0f;
+  if (cappedIntensity > 0x0f) cappedIntensity = 0x0f;
   
   // Erase the byte position, and set the light intensity
-  rawLEDData[bytePos] &= (byte) ((hexPos == 1)?0x0F:0xF0);
-  rawLEDData[bytePos] += (byte) (Intensity * ((hexPos == 1)?0x10:0x01));
+  rawLEDData[bytePos] &= (uint8_t) ((hexPos == 1)?0x0F:0xF0);
+  rawLEDData[bytePos] += (uint8_t) (cappedIntensity * ((hexPos == 1)?0x10:0x01));
   
   if (refreshState) {
-   // RefreshLEDState();
    sendLightDataPacket();
   }
 }
+
+
+void SBCController::SetAllLEDs(uint8_t Intensity,bool refreshState)
+{
+  for(uint8_t i =lowestLightVal;i<highestLightVal;i++)
+    SetLEDState((SBCController::ControllerLEDEnum)i, Intensity, false); 
+  SetLEDState((SBCController::ControllerLEDEnum) highestLightVal, Intensity, refreshState); 
+}
+

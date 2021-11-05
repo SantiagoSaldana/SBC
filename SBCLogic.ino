@@ -38,42 +38,22 @@ USBDriver *drivers[] = {&hub1, &hub2, &hid1};
 const char * driver_names[CNT_DEVICES] = {"Hub1", "Hub2", "HID1"};
 bool driver_active[CNT_DEVICES] = {false, false, false};
 
-bool lightSent = false;
-
-uint8_t lightValStart = 35;
-uint8_t lightValEnd = 41;
-uint8_t currentLightVal = lightValStart;
-
 //this gets called once data is transferred and appropriately copied.
 void rx_callback(const Transfer_t *transfer)
 {
 /*
+  Serial.print(SBC.getAimingX());
+  Serial.print(" ");
+  Serial.print(SBC.getAimingY());
+  Serial.print(" ");
   Serial.print(SBC.getRotationLever());
+  Serial.print(" ");
+  Serial.print(SBC.getLeftPedal());
   Serial.print(" ");
   Serial.print(SBC.getSightChangeX());
   Serial.print(" ");
-  Serial.print(SBC.getSightChangeY());
-  Serial.print(" ");
-  Serial.print(SBC.getAimingX());  
-  Serial.print(" ");
-  Serial.print(SBC.getAimingY());  
-  Serial.print(" ");
-  Serial.print(SBC.getLeftPedal());    
-  Serial.print(" ");
-  Serial.print(SBC.getMiddlePedal());  
-  Serial.print(" ");  
-  Serial.print(SBC.getRightPedal());  
-  Serial.print(" ");
-  Serial.print(SBC.getTunerDial());      
-  Serial.print(" ");
-  Serial.print(SBC.getGearLever());      
-  for(int i=0;i<39;i++)
-  {
-    Serial.print(SBC.getButtonState(i));
-    Serial.print(" ");
-  }
-  Serial.println();
-*/
+  Serial.println(SBC.getSightChangeX());*/
+  
   Joystick.X(SBC.getAimingX());
   Joystick.Y(SBC.getAimingY());
   Joystick.Z(SBC.getRotationLever());
@@ -85,48 +65,60 @@ void rx_callback(const Transfer_t *transfer)
     if(SBC.getButtonState(i)) 
     {   
       Joystick.button(i + 1, 1);
-      
-      if(!lightSent)
-      {
-        Serial.println("sending light");
-      SBC.SetLEDState(SBCController::ControllerLEDEnum::Eject, 0, false);  
-      lightSent = true;
-      }
     }
     else
       Joystick.button(i + 1, 0);
   }
     
   Joystick.send_now();
-
-  for(int i =lightValStart;i<lightValEnd;i++)
-    SBC.SetLEDState((SBCController::ControllerLEDEnum)i, 0, false);  
-     
-  SBC.SetLEDState((SBCController::ControllerLEDEnum)currentLightVal, 15, true);
-  currentLightVal++;
-
-  if(currentLightVal >= lightValEnd)
-    currentLightVal = lightValStart;
-  
-  delay(100);
-       
-    
+  delay(1);// has to be some delay
 }
+
 
 void setup()
 {
   Serial1.begin(2000000);
-  while (!Serial) ; // wait for Arduino Serial Monitor
+  //while (!Serial) ; // wait for Arduino Serial Monitor
   Joystick.useManualSend(true);
   
   SBC.data_received = rx_callback;
   myusb.begin();
+
+  
+  SBC.SetAllLEDs(SBC.minLightIntensity,true);
+  myusb.Task();
+
+  //make it so that it turns lights on incrementally like a startup sequence
+  for(uint8_t i =SBC.lowestLightVal;i<SBC.highestLightVal;i++)
+  {
+    SBC.SetLEDState((SBCController::ControllerLEDEnum)i, SBC.maxLightIntensity, true); 
+    myusb.Task();
+    delay(50);
+  }
+
+  SBC.SetAllLEDs(SBC.minLightIntensity,true);
+  myusb.Task();
 }
+
+bool flipLight = false;
 
 void loop()
 {
-  
+myusb.Task();
+//delay(1);
+/*
+  SBC.SetAllLEDs(SBC.minLightIntensity,true);
   myusb.Task();
-  delay(50);
+
+  //make it so that it turns lights on incrementally like a startup sequence
+  for(uint8_t i =SBC.lowestLightVal;i<SBC.highestLightVal;i++)
+  {
+    SBC.SetLEDState((SBCController::ControllerLEDEnum)i, SBC.maxLightIntensity, true); 
+    myusb.Task();
+    delay(50);
+  }
+
+  SBC.SetAllLEDs(SBC.minLightIntensity,true);
+  myusb.Task();*/
 }
 
