@@ -1,0 +1,40 @@
+#######################################
+# Syntax Coloring Map For SBC
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+SBCController	KEYWORD1	SBCController
+ButtonEnum	KEYWORD1	ButtonEnum
+ControllerLEDEnum	KEYWORD1	ControllerLEDEnum
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+getRotationLever	KEYWORD2
+getSightChangeX	KEYWORD2
+getSightChangeY	KEYWORD2
+getAimingX	KEYWORD2
+getAimingY	KEYWORD2
+getLeftPedal	KEYWORD2
+getMiddlePedal	KEYWORD2
+getRightPedal	KEYWORD2
+getTunerDial	KEYWORD2
+getGearLever	KEYWORD2
+getButtonState	KEYWORD2
+SetAllLEDs	KEYWORD2
+SetLEDState	KEYWORD2
+SetPollTime	KEYWORD2
+RefreshLEDState	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+lowestLightVal	LITERAL1
+highestLightVal	LITERAL1
+maxLightIntensity	LITERAL1
+minLightIntensity	LITERAL1
