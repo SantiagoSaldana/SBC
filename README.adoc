@@ -7,9 +7,6 @@ Requires an original XBOX -> USB adapter.  Make sure it is no longer than 3 ft.
 Additionally the library currently only works when plugged in directly into a computer.  It does NOT work when plugged in through a USB hub.
 This seems to be a power negotiation issue, but I have not been able to resolve it.  Also will not work if a hub is used between the Teensy and the controller.
 
-For more information about this library please visit us at
-https://github.com/SantiagoSaldana/SBC
-
 
 == License ==
 
