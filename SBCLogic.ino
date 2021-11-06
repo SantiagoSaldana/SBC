@@ -26,6 +26,7 @@
 
 #include <USBHost_t36.h>
 #include "SBCController.h"
+#include "limits.h"
 
 USBHost myusb;
 USBHub hub1(myusb);
@@ -41,7 +42,7 @@ bool driver_active[CNT_DEVICES] = {false, false, false};
 //this gets called once data is transferred and appropriately copied.
 void rx_callback(const Transfer_t *transfer)
 {
-/*
+
   Serial.print(SBC.getAimingX());
   Serial.print(" ");
   Serial.print(SBC.getAimingY());
@@ -52,26 +53,19 @@ void rx_callback(const Transfer_t *transfer)
   Serial.print(" ");
   Serial.print(SBC.getSightChangeX());
   Serial.print(" ");
-  Serial.println(SBC.getSightChangeX());*/
+  Serial.println(SBC.getSightChangeX());
   
   Joystick.X(SBC.getAimingX());
   Joystick.Y(SBC.getAimingY());
-  Joystick.Z(SBC.getRotationLever());
+  Joystick.Z(map(SBC.getRotationLever(),-512,512,0,1023));
   Joystick.Zrotate(SBC.getLeftPedal());
-  Joystick.sliderLeft(SBC.getSightChangeX());
-  Joystick.sliderRight(SBC.getSightChangeY());
-  for(int i=0;i<32;i++)
-  {
-    if(SBC.getButtonState(i)) 
-    {   
-      Joystick.button(i + 1, 1);
-    }
-    else
-      Joystick.button(i + 1, 0);
-  }
+  Joystick.sliderLeft(map(SBC.getSightChangeX(),-512,512,0,1023));
+  Joystick.sliderRight(map(SBC.getSightChangeY(),-512,512,0,1023));
+  for(int i=0;i<32;i++)  
+      Joystick.button(i + 1, SBC.getButtonState(i));
     
   Joystick.send_now();
-  delay(1);// has to be some delay
+  //minimum time between Polls is 3.  Lower than this and we can't send lightpacket as well.
 }
 
 
@@ -100,25 +94,8 @@ void setup()
   myusb.Task();
 }
 
-bool flipLight = false;
-
 void loop()
 {
 myusb.Task();
-//delay(1);
-/*
-  SBC.SetAllLEDs(SBC.minLightIntensity,true);
-  myusb.Task();
-
-  //make it so that it turns lights on incrementally like a startup sequence
-  for(uint8_t i =SBC.lowestLightVal;i<SBC.highestLightVal;i++)
-  {
-    SBC.SetLEDState((SBCController::ControllerLEDEnum)i, SBC.maxLightIntensity, true); 
-    myusb.Task();
-    delay(50);
-  }
-
-  SBC.SetAllLEDs(SBC.minLightIntensity,true);
-  myusb.Task();*/
 }
 

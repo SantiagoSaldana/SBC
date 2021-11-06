@@ -39,7 +39,7 @@ public:
  
  
 
-void setGearLights(bool update,int intensity);
+void setGearLights(bool update,uint8_t intensity);
 static int getTotalButtons(){return 39;}
   
 //DO NOT CHANGE ORDER
@@ -134,7 +134,7 @@ const uint8_t highestLightVal = (uint8_t) ControllerLEDEnum::Gear5;
 const uint8_t maxLightIntensity = 15;
 const uint8_t minLightIntensity = 0;
 
-uint16_t timeBetweenPolls = 50;//time in microseconds to delay
+uint16_t timeBetweenPolls = 4;//time in microseconds to delay
 
 /// <summary>
     /// Corresponds to the "Rotation Lever" joystick on the left. range: -512 - 511
@@ -157,9 +157,6 @@ static void StartPolling();
 void StopPolling();
 
 void sendLightDataPacket();
-
-bool firstSent = false;
-
 void RefreshLEDState() 
 {
     sendLightDataPacket();
@@ -176,7 +173,7 @@ void (*data_received)(const Transfer_t *);
 static const int rawLEDDataLength = 22;
 byte rawLEDData[rawLEDDataLength];
 
-  void pollDevice();//called by timer to poll device for status.
+void pollDevice();//will be used for poll timing in he future.
 
 protected:
 	virtual bool claim(Device_t *dev, int type, const uint8_t *descriptors, uint32_t len);
@@ -216,13 +213,8 @@ protected:
   // The byte buffer that the raw LED data is stored
 
   bool updateGearLights = true;
-  int gearLightIntensity = 15;
+  int gearLightIntensity = 8;
 
-  const int _signedAxisMin = -512;
-  const int _signedAxisMax = -511;
-
-  const int _unsignedAxisMin = 0;
-  const int _unsignedAxisMax = 1023;
 
   uint16_t pollTimeMicroSeconds = 10000;
 

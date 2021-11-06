@@ -148,35 +148,29 @@ void SBCController::rx_callback(const Transfer_t *transfer)
 
 void SBCController::rx_data(const Transfer_t *transfer)
 {
-
-    for(int i=0;i<32;i++)
-    Serial.print(getButtonState(i));
-    Serial.println();
-    
-  print_hexbytes((uint8_t*)transfer->buffer, transfer->length);
-
   uint8_t previousGearState = getGearLever();
-  //GearLightsRefresh(previousGearState);
 
   memmove(rawControlData, (uint8_t*)transfer->buffer, rawControlDataLength);
 
 
   int8_t currentGearState = getGearLever();
-
-/*
-  if (updateGearLights && currentGearState != previousGearState);
-  {
-    GearLightsRefresh(currentGearState);
-  }
-/*
-  Serial.print("gear state");
-  Serial.print(previousGearState);
-  Serial.print(" : ");
-  Serial.println(currentGearState);
-*/
-
   data_received(transfer);
 
+  if (updateGearLights && currentGearState != previousGearState);
+  {
+    
+  /*Serial.print("gear state");
+  Serial.print(previousGearState);
+  Serial.print(" : ");
+  Serial.println(currentGearState);*/
+  
+    GearLightsRefresh(currentGearState);
+  }
+
+
+
+  
+  delay(timeBetweenPolls);
   //not sure about whether I should call this from here or do a poll timer.
   //this is curently working so I will leave it like this for now.
   queue_Data_Transfer(rxpipe_, rxbuf_, rx_size_, this);
@@ -214,7 +208,6 @@ void SBCController::tx_callback(const Transfer_t *transfer)
 
 void SBCController::sendLightDataPacket()
 {
-  firstSent = true;
   //Serial.println("trying to send light");
   memmove(txbuf_, rawLEDData, rawLEDDataLength);
   queue_Data_Transfer(txpipe_, txbuf_, tx_size_, this);
@@ -231,10 +224,10 @@ void SBCController::tx_data(const Transfer_t *transfer)
 
 // extra SBC logic stuff
 
-void SBCController::setGearLights(bool update,int intensity)
+void SBCController::setGearLights(bool update,uint8_t intensity)
 {
   updateGearLights = update;
-  gearLightIntensity = intensity;
+  gearLightIntensity = constrain(intensity,minLightIntensity,maxLightIntensity);
 }
 
 
