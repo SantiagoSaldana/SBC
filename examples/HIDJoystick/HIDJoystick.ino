@@ -42,7 +42,7 @@ bool driver_active[CNT_DEVICES] = {false, false, false};
 //this gets called once data is transferred and appropriately copied.
 void rx_callback(const Transfer_t *transfer)
 {
-
+/*
   Serial.print(SBC.getAimingX());
   Serial.print(" ");
   Serial.print(SBC.getAimingY());
@@ -53,7 +53,7 @@ void rx_callback(const Transfer_t *transfer)
   Serial.print(" ");
   Serial.print(SBC.getSightChangeX());
   Serial.print(" ");
-  Serial.println(SBC.getSightChangeX());
+  Serial.println(SBC.getSightChangeX());*/
   
   Joystick.X(SBC.getAimingX());
   Joystick.Y(SBC.getAimingY());
