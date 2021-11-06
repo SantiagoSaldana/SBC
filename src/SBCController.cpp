@@ -23,7 +23,7 @@
 
 #include <Arduino.h>
 #include <USBHost_t36.h>
-#include "SBCController.h"
+#include "SBC.h"
 
 extern void dump_hexbytes(const void *ptr, uint32_t len);
 

@@ -25,7 +25,7 @@
 // This example is in the public domain
 
 #include <USBHost_t36.h>
-#include "SBCController.h"
+#include "SBC.h"
 #include "limits.h"
 
 USBHost myusb;
