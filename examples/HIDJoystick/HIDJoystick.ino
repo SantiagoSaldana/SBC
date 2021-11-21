@@ -85,7 +85,7 @@ void setup()
   //make it so that it turns lights on incrementally like a startup sequence
   for(uint8_t i =SBC.lowestLightVal;i<SBC.highestLightVal;i++)
   {
-    SBC.SetLEDState((SBCController::ControllerLEDEnum)i, SBC.maxLightIntensity, true); 
+    SBC.SetLEDState((ControllerLEDEnum)i, SBC.maxLightIntensity, true); 
     myusb.Task();
     delay(50);
   }
@@ -98,4 +98,3 @@ void loop()
 {
 myusb.Task();
 }
-

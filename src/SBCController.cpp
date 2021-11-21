@@ -150,6 +150,7 @@ void SBCController::rx_data(const Transfer_t *transfer)
 {
   uint8_t previousGearState = getGearLever();
 
+  memmove(prevControlData, rawControlData, rawControlDataLength);//used for comparisons
   memmove(rawControlData, (uint8_t*)transfer->buffer, rawControlDataLength);
 
 
@@ -323,6 +324,11 @@ int16_t SBCController::getSignedAxisValue(uint8_t firstIndex, uint8_t SecondInde
 /// <param name="buf">Int value of button enum</param>
 bool SBCController::getButtonState(uint8_t buttonVal)
 {
+  return getButtonState(rawControlData,buttonVal);
+}
+
+bool SBCController::getButtonState(byte* dataset,uint8_t buttonVal)
+{
   uint8_t offsetVal;
   uint8_t maskVal;
   if(buttonVal < 39)
@@ -330,10 +336,17 @@ bool SBCController::getButtonState(uint8_t buttonVal)
         offsetVal = 2+(uint8_t)((buttonVal)/8);
         maskVal = 1<<(buttonVal%8);
 
-    return ((rawControlData[offsetVal] & maskVal) > 0);
+    return ((dataset[offsetVal] & maskVal) > 0);
   }
   return false;
 }
+
+bool SBCController::buttonChanged(uint8_t buttonVal)
+{
+	return (getButtonState(buttonVal) == getButtonState(prevControlData,buttonVal));
+}
+
+
 
 /// <summary>
 /// Sets the intensity of the specified LED in the buffer, but gives the option on whether you want
@@ -364,7 +377,7 @@ void SBCController::SetLEDState(ControllerLEDEnum LightId, uint8_t Intensity, bo
 void SBCController::SetAllLEDs(uint8_t Intensity,bool refreshState)
 {
   for(uint8_t i =lowestLightVal;i<highestLightVal;i++)
-    SetLEDState((SBCController::ControllerLEDEnum)i, Intensity, false); 
-  SetLEDState((SBCController::ControllerLEDEnum) highestLightVal, Intensity, refreshState); 
+    SetLEDState((ControllerLEDEnum)i, Intensity, false); 
+  SetLEDState((ControllerLEDEnum) highestLightVal, Intensity, refreshState); 
 }
 

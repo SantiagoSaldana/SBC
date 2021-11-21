@@ -29,19 +29,6 @@
 #include <USBHost_t36.h>
 
 
- //IntervalTimer pollTimer;
- 
-class SBCController : public USBDriver {
-public:
-	SBCController(USBHost &host) { init();}
-
- Device_t *currentDevice;
- 
- 
-
-void setGearLights(bool update,uint8_t intensity);
-static int getTotalButtons(){return 39;}
-  
 //DO NOT CHANGE ORDER
 //THESE match the order they are presented in the USB packet
 enum class ButtonEnum {
@@ -129,6 +116,21 @@ enum class ControllerLEDEnum {
     Gear5 = 41
 };
 
+
+ //IntervalTimer pollTimer;
+ 
+class SBCController : public USBDriver {
+public:
+	SBCController(USBHost &host) { init();}
+
+ Device_t *currentDevice;
+ 
+ 
+
+void setGearLights(bool update,uint8_t intensity);
+static int getTotalButtons(){return 39;}
+  
+
 const uint8_t lowestLightVal = (uint8_t) ControllerLEDEnum::Eject;
 const uint8_t highestLightVal = (uint8_t) ControllerLEDEnum::Gear5;
 const uint8_t maxLightIntensity = 15;
@@ -150,6 +152,7 @@ uint16_t getRightPedal();
 uint8_t getTunerDial();
 int8_t getGearLever();
 bool getButtonState(uint8_t buttonVal);
+bool buttonChanged(uint8_t buttonVal);
 void SetAllLEDs(uint8_t Intensity,bool refreshState);
 void SetLEDState(ControllerLEDEnum LightId, uint8_t Intensity, bool refreshState);
 void SetPollTime(uint16_t milliseconds);
@@ -218,13 +221,16 @@ protected:
 
   uint16_t pollTimeMicroSeconds = 10000;
 
-
+  bool getButtonState(byte* dataset,uint8_t buttonVal);
   int16_t getSignedAxisValue(uint8_t firstIndex, uint8_t SecondIndex);
   uint16_t getAxisValue(uint8_t firstIndex, uint8_t SecondIndex);
 
  
   // The byte buffer that the raw control data is stored
   byte rawControlData[rawControlDataLength];
+  
+  //contains the previous frames
+  byte prevControlData[rawControlDataLength];
 
   /// <summary>
   /// Checks to see if the buton state has changed
