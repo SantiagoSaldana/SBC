@@ -151,7 +151,12 @@ uint16_t getMiddlePedal();
 uint16_t getRightPedal();
 uint8_t getTunerDial();
 int8_t getGearLever();
+bool getButtonState(ButtonEnum buttonVal){return getButtonState((uint8_t) buttonVal); }
+bool getButtonState(ControllerLEDEnum buttonVal){return getButtonState((uint8_t) buttonVal); }
 bool getButtonState(uint8_t buttonVal);
+
+bool buttonChanged(ButtonEnum buttonVal){return buttonChanged((uint8_t) buttonVal); }
+bool buttonChanged(ControllerLEDEnum buttonVal){return buttonChanged((uint8_t) buttonVal); }
 bool buttonChanged(uint8_t buttonVal);
 void SetAllLEDs(uint8_t Intensity,bool refreshState);
 void SetLEDState(ControllerLEDEnum LightId, uint8_t Intensity, bool refreshState);
