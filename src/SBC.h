@@ -138,19 +138,17 @@ const uint8_t minLightIntensity = 0;
 
 uint16_t timeBetweenPolls = 4;//time in microseconds to delay
 
-/// <summary>
-    /// Corresponds to the "Rotation Lever" joystick on the left. range: -512 - 511
-/// </summary>
-int16_t getRotationLever();
-int16_t getSightChangeX();
-int16_t getSightChangeY();
-uint16_t getAimingX();
-uint16_t getAimingY();
+int16_t getRotationLever(); /// Corresponds to the "Rotation Lever" joystick on the left. range: -512 - 511
+int16_t getSightChangeX();	/// Corresponds to the "Sight Change" analog stick on the "Rotation Lever" joystick.  X Axis value. range: -512 - 511
+int16_t getSightChangeY();	/// Corresponds to the "Sight Change" analog stick on the "Rotation Lever" joystick.  Y Axis value. range: -512 - 511
+uint16_t getAimingX();		/// Corresponds to the "Aiming Lever" joystick on the right.  X Axis value. range: 0 - 1023
+uint16_t getAimingY();		/// Corresponds to the "Aiming Lever" joystick on the right.  Y Axis value. range: 0 - 1023
 uint16_t getLeftPedal();
-uint16_t getMiddlePedal();
-uint16_t getRightPedal();
-uint8_t getTunerDial();
-int8_t getGearLever();
+uint16_t getMiddlePedal();	/// Corresponds to the middle pedal on the pedal block, range 0 - 1023
+uint16_t getRightPedal();	/// Corresponds to the right pedal on the pedal block, range 0 - 1023
+uint8_t getTunerDial();		/// Corresponds to the tuner dial position.  The 9 o'clock postion is 0, and the 6 o'clock position is 12.
+							/// The blank area between the 6 and 9 o'clock positions is 13, 14, and 15 clockwise.
+int8_t getGearLever();      /// Corresponds to the gear lever on the left block.  range: -2,-1,1,2,3,4,5
 bool getButtonState(ButtonEnum buttonVal){return getButtonState((uint8_t) buttonVal); }
 bool getButtonState(ControllerLEDEnum buttonVal){return getButtonState((uint8_t) buttonVal); }
 bool getButtonState(uint8_t buttonVal);
