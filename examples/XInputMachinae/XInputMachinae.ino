@@ -61,6 +61,13 @@ uint8_t currentLight = startingLight;
 bool finishSequence = false;
 uint8_t lightIntensity = 0;
 
+ControllerLEDEnum allLEDs[8];//can probably initiate it all here.
+ControllerLEDEnum aimingLED;
+
+
+unsigned long currentMillisGrid;
+uint16_t timeBetweenGridLights = 10;//10 milliseconds between updates
+
 
 //For reference, here are all the buttons
 /*
@@ -240,51 +247,87 @@ void linkTrigger(ButtonEnum aButton,XInputControl  trigger)
   }
 }
 
+ControllerLEDEnum handleDpadLighting(int8_t dpadX,int8_t dpadY)
+{
+  ControllerLEDEnum currentLED;
+
+  int8_t tempX = dpadX;
+  int8_t tempY = dpadY * -1;
+   
+  if(tempX == -1 && tempY == 1)
+  {
+    currentLED = ControllerLEDEnum::F1;
+    //Serial.println("F1");
+  }
+  else if(tempX == 0 && tempY == 1)
+    currentLED = ControllerLEDEnum::TankDetach;    
+  else if(tempX == 1 && tempY == 1)
+    currentLED = ControllerLEDEnum::ForecastShootingSystem;   
+  else if(tempX == -1 && tempY == 0)
+    currentLED = ControllerLEDEnum::F2;   
+  else if(tempX == 1 && tempY == 0)
+    currentLED = ControllerLEDEnum::Manipulator;
+  else if(tempX == -1 && tempY == -1)
+    currentLED = ControllerLEDEnum::F3;
+  else if(tempX == 0 && tempY == -1)
+    currentLED = ControllerLEDEnum::NightScope;
+  else if(tempX == 1 && tempY == -1)
+    currentLED = ControllerLEDEnum::LineColorChange;  
+
+return currentLED;
+
+}
+
 //this gets called once data is transferred and appropriately copied.
 void rx_callback(const Transfer_t *transfer)
 {
+  linkDoubleButton(ButtonEnum::Eject,BUTTON_BACK,BUTTON_START);
+  if(!ejecting)
+  {
+    linkButton(ButtonEnum::Start,BUTTON_START);//menu
+    linkButton(ButtonEnum::Ignition,BUTTON_BACK);//ignition
+  }
+  linkButton(ButtonEnum::RightJoyLockOn,BUTTON_Y);//ignition
+  linkButton(ButtonEnum::CockpitHatch,BUTTON_B);//horn
+  linkButton(ButtonEnum::LeftJoySightChange,BUTTON_R3);//horn
   
-/*linkTrigger(ButtonEnum::RightJoyFire,TRIGGER_RIGHT);
-linkTrigger(ButtonEnum::RightJoyMainWeapon,TRIGGER_LEFT);*/
-linkDoubleButton(ButtonEnum::Eject,BUTTON_BACK,BUTTON_START);
-if(!ejecting)
-{
-  linkButton(ButtonEnum::Start,BUTTON_START);//menu
-  linkButton(ButtonEnum::Ignition,BUTTON_BACK);//ignition
-}
-linkButton(ButtonEnum::RightJoyLockOn,BUTTON_Y);//ignition
-linkButton(ButtonEnum::CockpitHatch,BUTTON_B);//horn
-linkButton(ButtonEnum::LeftJoySightChange,BUTTON_R3);//horn
-
-lastDpadX = handleDPad(SBC.getAimingX(),lastDpadX,DPAD_LEFT,DPAD_RIGHT);
-lastDpadY = handleDPad(SBC.getAimingY(),lastDpadY,DPAD_UP,DPAD_DOWN);//yaxis vals were flipped, so changed order
-
-XInput.setJoystick(JOY_LEFT,SBC.getRotationLever()*2.0f,-1*SBC.getMiddlePedal() + SBC.getRightPedal());
-XInput.setJoystick(JOY_RIGHT,SBC.getSightChangeX(),SBC.getSightChangeY());
-
-uint16_t leftPedalVal = SBC.getLeftPedal();
-
-if(leftPedalVal > jumpThreshold && !jumpPressed)
-{
-  XInput.press(BUTTON_A);
-  jumpPressed = true;
-}
-
-if(leftPedalVal <= jumpThreshold && jumpPressed)
-{
-  XInput.release(BUTTON_A);
-  jumpPressed = false;
-}
-
-
-if(SBC.getMiddlePedal() > 250)
-XInput.setTrigger(TRIGGER_LEFT, map(SBC.getMiddlePedal(),0,1023,0,255));
-
-if(SBC.getRightPedal() > 250)
-XInput.setTrigger(TRIGGER_RIGHT, map(SBC.getRightPedal(),0,1023,0,255));
-
-
-XInput.send();
+  lastDpadX = handleDPad(SBC.getAimingX(),lastDpadX,DPAD_LEFT,DPAD_RIGHT);
+  lastDpadY = handleDPad(SBC.getAimingY(),lastDpadY,DPAD_UP,DPAD_DOWN);//yaxis vals were flipped, so changed order
+  
+  aimingLED = handleDpadLighting(lastDpadX,lastDpadY);
+  
+  XInput.setJoystick(JOY_LEFT,SBC.getRotationLever()*2.0f,-1*SBC.getMiddlePedal() + SBC.getRightPedal());
+  XInput.setJoystick(JOY_RIGHT,SBC.getSightChangeX(),SBC.getSightChangeY());
+  
+  uint16_t leftPedalVal = SBC.getLeftPedal();
+  
+  if(leftPedalVal > jumpThreshold && !jumpPressed)
+  {
+    XInput.press(BUTTON_A);
+    jumpPressed = true;
+  }
+  
+  if(leftPedalVal <= jumpThreshold && jumpPressed)
+  {
+    XInput.release(BUTTON_A);
+    jumpPressed = false;
+  }
+  
+  if(!SBC.getButtonState(ButtonEnum::ToggleFilterControl))
+  {
+    linkTrigger(ButtonEnum::RightJoyFire,TRIGGER_RIGHT);
+    linkTrigger(ButtonEnum::RightJoyMainWeapon,TRIGGER_LEFT);
+  }
+  else
+  {
+    //used for testing feedback directly
+    if(SBC.getMiddlePedal() > 250)
+    XInput.setTrigger(TRIGGER_LEFT, map(SBC.getMiddlePedal(),0,1023,0,255));
+    
+    if(SBC.getRightPedal() > 250)
+    XInput.setTrigger(TRIGGER_RIGHT, map(SBC.getRightPedal(),0,1023,0,255));
+  }
+  XInput.send();
 
 }
 
@@ -307,6 +350,15 @@ void setup()
 {
   Serial1.begin(2000000);
   //while (!Serial) ; // wait for Arduino Serial Monitor
+
+  allLEDs[0] = ControllerLEDEnum::F1;
+  allLEDs[1] = ControllerLEDEnum::TankDetach;
+  allLEDs[2] = ControllerLEDEnum::ForecastShootingSystem;  
+  allLEDs[3] = ControllerLEDEnum::F2;  
+  allLEDs[4] = ControllerLEDEnum::Manipulator;    
+  allLEDs[5] = ControllerLEDEnum::F3;    
+  allLEDs[6] = ControllerLEDEnum::NightScope;    
+  allLEDs[7] = ControllerLEDEnum::LineColorChange; 
   
   
   SBC.data_received = rx_callback;
@@ -375,16 +427,30 @@ void handleLeftRumble()
   }
 }
 
+void handleGridLights()
+{
+  if(millis() - currentMillisGrid > timeBetweenGridLights)
+  {
+    for(int i=0;i<8;i++)
+    if(allLEDs[i] != aimingLED)    
+      SBC.SetLEDState(allLEDs[i], SBC.minLightIntensity, false);   
 
+     if((uint8_t) aimingLED >= 4)                                                                                 
+      SBC.SetLEDState(aimingLED, SBC.maxLightIntensity, true); 
+
+     currentMillisGrid = millis();
+  }
+}
 
 
 void loop()
 {
   handleLeftRumble();
+  handleGridLights();
+
 
 //Serial.println(SBC.getAimingX());
 //XInput.setJoystick(JOY_LEFT, SBC.getAimingX(), 1023-SBC.getAimingY());  // flip y axis
-
 
 myusb.Task();
 }
