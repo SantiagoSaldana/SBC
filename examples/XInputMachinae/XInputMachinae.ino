@@ -51,8 +51,13 @@ uint8_t leftRumble = 0;
 uint8_t rightRumble = 0;
 
 uint16_t timeBetweenCommLights = 0;//set dynamically
+uint16_t maxTimeBetweenCommLights = 200;
 
-unsigned long currentMillis;
+uint16_t timeBetweenCenterLights = 0;//set dynamically
+uint16_t maxTimeBetweenCenterLights = 400;
+
+unsigned long currentLeftMillis;//time variable used for left motor light sequence
+unsigned long currentRightMillis;//time variable used for left motor light sequence
 
 uint8_t startingLight = (uint8_t)ControllerLEDEnum::Comm1;
 uint8_t totalLights = 5;
@@ -61,12 +66,18 @@ uint8_t currentLight = startingLight;
 bool finishSequence = false;
 uint8_t lightIntensity = 0;
 
-ControllerLEDEnum allLEDs[8];//can probably initiate it all here.
+ControllerLEDEnum gridLEDs[] = {ControllerLEDEnum::F1,ControllerLEDEnum::TankDetach,ControllerLEDEnum::ForecastShootingSystem,ControllerLEDEnum::F2,ControllerLEDEnum::Manipulator,ControllerLEDEnum::F3,ControllerLEDEnum::NightScope,ControllerLEDEnum::LineColorChange};
+ControllerLEDEnum leftRumbleLEDs[] = {ControllerLEDEnum::Comm1,ControllerLEDEnum::Comm2,ControllerLEDEnum::Comm3,ControllerLEDEnum::Comm4,ControllerLEDEnum::Comm5};
+ControllerLEDEnum rightRumbleLEDs[] = {ControllerLEDEnum::Washing,ControllerLEDEnum::Extinguisher,ControllerLEDEnum::Chaff,ControllerLEDEnum::MainWeaponControl,ControllerLEDEnum::SubWeaponControl,ControllerLEDEnum::MagazineChange};
+const uint8_t rightRumbleLEDlength = sizeof(rightRumbleLEDs) / sizeof(rightRumbleLEDs[0]);
 ControllerLEDEnum aimingLED;
 
 
 unsigned long currentMillisGrid;
 uint16_t timeBetweenGridLights = 10;//10 milliseconds between updates
+bool finishCenterSequence = false;
+
+bool turnCenterLightsOn = true;
 
 
 //For reference, here are all the buttons
@@ -351,20 +362,9 @@ void setup()
   Serial1.begin(2000000);
   //while (!Serial) ; // wait for Arduino Serial Monitor
 
-  allLEDs[0] = ControllerLEDEnum::F1;
-  allLEDs[1] = ControllerLEDEnum::TankDetach;
-  allLEDs[2] = ControllerLEDEnum::ForecastShootingSystem;  
-  allLEDs[3] = ControllerLEDEnum::F2;  
-  allLEDs[4] = ControllerLEDEnum::Manipulator;    
-  allLEDs[5] = ControllerLEDEnum::F3;    
-  allLEDs[6] = ControllerLEDEnum::NightScope;    
-  allLEDs[7] = ControllerLEDEnum::LineColorChange; 
-  
-  
   SBC.data_received = rx_callback;
   myusb.begin();
 
-  
   SBC.SetAllLEDs(SBC.minLightIntensity,true);
   myusb.Task();
 
@@ -375,7 +375,7 @@ void setup()
     myusb.Task();
     delay(50);
   }
-
+  
   SBC.SetAllLEDs(SBC.minLightIntensity,true);
   myusb.Task();
 
@@ -386,25 +386,24 @@ void setup()
   // Set callback function. Function must have a 'void' return type
   // and take a single uint8_t as an argument
   XInput.setReceiveCallback(rumbleCallback);
-  XInput.begin();
-  
+  XInput.begin();  
 }
+
 
 void handleLeftRumble()
 {
   if(leftRumble > 0)
   {
-    timeBetweenCommLights = 200 - (leftRumble / 2);//leftRumble max = 255, /2 = 127, higher rumble = 
+    timeBetweenCommLights = maxTimeBetweenCommLights - (leftRumble / 2);//leftRumble max = 255, /2 = 127, higher rumble = 
     lightIntensity = map(leftRumble,0,255,SBC.minLightIntensity,SBC.maxLightIntensity);
-    if(millis() - currentMillis > timeBetweenCommLights)
+    if(millis() - currentLeftMillis > timeBetweenCommLights)
     {
       int8_t prevLight = lightIndex - 1;
       if(lightIndex < 0)
         prevLight = totalLights - 1;
   
-      SBC.SetLEDState((ControllerLEDEnum) (startingLight+prevLight), SBC.minLightIntensity, true);  
-  
-      SBC.SetLEDState((ControllerLEDEnum) (startingLight+lightIndex), lightIntensity, true);
+      SBC.SetLEDState(leftRumbleLEDs[prevLight], SBC.minLightIntensity, true);   
+      SBC.SetLEDState(leftRumbleLEDs[lightIndex], lightIntensity, true);
         
       lightIndex++;
       
@@ -414,15 +413,56 @@ void handleLeftRumble()
         leftRumble = 0;//at this point we should be done with the sequence
         finishSequence = true;
       }
-      currentMillis = millis();
+      currentLeftMillis = millis();
     }
   }
   else
   {
-    if(finishSequence && (millis() - currentMillis > timeBetweenCommLights))
+    if(finishSequence && (millis() - currentLeftMillis > timeBetweenCommLights))
     {
-      SBC.SetLEDState((ControllerLEDEnum) (startingLight), SBC.minLightIntensity, true);  
+      SBC.SetLEDState(leftRumbleLEDs[0], SBC.minLightIntensity, true);  
       finishSequence = false;
+    }
+  }
+}
+
+
+void handleRightRumble()
+{
+  uint8_t currentIntensity;
+  if(rightRumble > 100)//hack to get it working I feel there may be an issue with what is reported back by left and rightrumble maybe it doesn't go up to 255
+  {
+    timeBetweenCenterLights = maxTimeBetweenCenterLights - (rightRumble / 2);//leftRumble max = 255, /2 = 127, higher rumble = 
+    currentIntensity = map(rightRumble,0,255,SBC.minLightIntensity,SBC.maxLightIntensity);
+    if(millis() - currentRightMillis > timeBetweenCenterLights)
+    {
+      Serial.print(rightRumble);
+      Serial.println(" flickering lights");
+      uint8_t centerLightIntensity = 0;
+      if(turnCenterLightsOn)
+        centerLightIntensity = currentIntensity;
+      else
+        centerLightIntensity = SBC.minLightIntensity;        
+        
+      for(int i= 0;i<rightRumbleLEDlength-1;i++)
+        SBC.SetLEDState(rightRumbleLEDs[i], centerLightIntensity, false);  
+      SBC.SetLEDState(rightRumbleLEDs[rightRumbleLEDlength-1], centerLightIntensity, true);
+           
+      currentRightMillis = millis();
+      turnCenterLightsOn = !turnCenterLightsOn;
+      finishCenterSequence = true;
+      //flickerCount++;
+    }
+  }
+  else
+  {
+    //always finish by turning off lights
+    if(finishCenterSequence && (millis() - currentRightMillis > timeBetweenCenterLights))
+    {
+      for(int i= 0;i<rightRumbleLEDlength-1;i++)
+        SBC.SetLEDState(rightRumbleLEDs[i], SBC.minLightIntensity, false);  
+      SBC.SetLEDState(rightRumbleLEDs[rightRumbleLEDlength-1], SBC.minLightIntensity, true); 
+      finishCenterSequence = false;
     }
   }
 }
@@ -431,9 +471,10 @@ void handleGridLights()
 {
   if(millis() - currentMillisGrid > timeBetweenGridLights)
   {
+    
     for(int i=0;i<8;i++)
-    if(allLEDs[i] != aimingLED)    
-      SBC.SetLEDState(allLEDs[i], SBC.minLightIntensity, false);   
+    if(gridLEDs[i] != aimingLED)    
+      SBC.SetLEDState(gridLEDs[i], SBC.minLightIntensity, false);   
 
      if((uint8_t) aimingLED >= 4)                                                                                 
       SBC.SetLEDState(aimingLED, SBC.maxLightIntensity, true); 
@@ -442,12 +483,14 @@ void handleGridLights()
   }
 }
 
+uint16_t i = 0;
 
 void loop()
 {
-  handleLeftRumble();
-  handleGridLights();
 
+  handleLeftRumble();
+  handleRightRumble();
+  handleGridLights();
 
 //Serial.println(SBC.getAimingX());
 //XInput.setJoystick(JOY_LEFT, SBC.getAimingX(), 1023-SBC.getAimingY());  // flip y axis
