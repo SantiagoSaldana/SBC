@@ -1,5 +1,5 @@
 # Steel Battalion Controller Library for Arduino
-[![arduino-library-badge](https://www.ardu-badge.com/badge/SBC.svg?)](https://www.ardu-badge.com/SBC) [![Build Status](https://github.com/SantiagoSaldana/SBC/workflows/build/badge.svg?branch=master)](https://github.com/SantiagoSaldana/SBC/actions?query=workflow%3Abuild)
+[![arduino-library-badge](https://www.ardu-badge.com/badge/SBC.svg?)](https://www.ardu-badge.com/SBC)
 
 Allows communications with a Steel Battalion Controller using a Teensy 4.0 or 4.1
 
