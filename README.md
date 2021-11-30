@@ -1,4 +1,5 @@
-= Steel Battalion Controller Library for Arduino =
+# Steel Battalion Controller Library for Arduino
+[![arduino-library-badge](https://www.ardu-badge.com/badge/SBC.svg?)](https://www.ardu-badge.com/SBC) [![Build Status](https://github.com/SantiagoSaldana/SBC/workflows/build/badge.svg?branch=master)](https://github.com/SantiagoSaldana/SBC/actions?query=workflow%3Abuild)
 
 Allows communications with a Steel Battalion Controller using a Teensy 4.0 or 4.1
 
@@ -8,7 +9,7 @@ Additionally the library currently only works when plugged in directly into a co
 This seems to be a power negotiation issue, but I have not been able to resolve it.  Also will not work if a hub is used between the Teensy and the controller.
 
 
-== License ==
+## License
 
 Copyright (c) 2010 Arduino LLC. All right reserved.
 
